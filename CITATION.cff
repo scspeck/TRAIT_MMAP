@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "Please cite the version of Trait MMAP used in your research."
+title: "Trait MMAP: Mapper for Mammals and Parasites"
+type: software
+authors:
+  - given-names: "Samuel C."
+    family-names: "Speck"
+    affiliation: "Kansas State University"
+license: MIT
+abstract: >-
+  Trait MMAP is an upload-first browser application for interactive spatial
+  exploration, trait filtering, record selection, and export of georeferenced
+  biological datasets.
+keywords:
+  - biodiversity informatics
+  - mammals
+  - parasites
+  - traits
+  - GIS

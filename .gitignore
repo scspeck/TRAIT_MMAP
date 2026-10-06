@@ -1,0 +1,10 @@
+.DS_Store
+Thumbs.db
+.env
+.env.*
+data/raw/
+testing/private/
+paper/drafts/
+development/
+archive/
+*.zip
