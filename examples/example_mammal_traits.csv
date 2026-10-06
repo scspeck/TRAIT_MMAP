@@ -1,0 +1,5 @@
+record_id,scientific_name,genus,state_province,year,sex,weight_g,latitude,longitude
+EX001,Myotis lucifugus,Myotis,Kansas,2022,Female,8.2,39.1836,-96.5717
+EX002,Myotis velifer,Myotis,Kansas,2023,F,12.1,37.6872,-97.3301
+EX003,Peromyscus leucopus,Peromyscus,Kansas,2021,female,22.4,39.3111,-96.5920
+EX004,Geomys bursarius,Geomys,Oklahoma,2020,Male,205,36.1540,-95.9928
