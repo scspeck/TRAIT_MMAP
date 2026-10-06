@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Trait MMAP — Mapper for Mammals and Parasites. Upload, filter, map, spatially select, and export georeferenced mammal trait data in your browser.">
-<title>Trait MMAP — Mapper for Mammals and Parasites</title>
+<meta name="description" content="Trait MMAP - Mapper for Mammals and Parasites. Upload, filter, map, spatially select, and export georeferenced mammal trait data in your browser.">
+<title>Trait MMAP - Mapper for Mammals and Parasites</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
@@ -81,6 +81,11 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .multi-empty{padding:8px 6px;color:var(--muted);font-size:.74rem;text-align:center}
 .multi-option{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:6px;align-items:center;padding:4px 5px;margin:0;font-weight:normal;font-size:.76rem}
 .multi-option:hover{background:#f4f7f8}
+.multi-option.search-hit{
+  background:#fff3b0;
+  outline:2px solid #d7a900;
+  outline-offset:-2px;
+}
 .multi-option input{width:auto;margin:0}
 .multi-option .value{overflow-wrap:anywhere}
 .multi-option .count{color:var(--muted);font-size:.68rem}
@@ -139,7 +144,7 @@ footer{margin:18px 0 4px;padding-top:10px;border-top:1px solid var(--border)}
 <body>
 <aside>
   <h1>Trait MMAP</h1>
-  <div class="brand-sub">Mapper for Mammals and Parasites · v1.0.3-rc2</div>
+  <div class="brand-sub">Mapper for Mammals and Parasites · v1.0.0-rc1</div>
   <div class="subtitle">
     Upload a georeferenced mammal dataset, choose the biological traits you want to explore,
     filter records interactively, select them spatially, and export research-ready subsets.
@@ -292,7 +297,7 @@ footer{margin:18px 0 4px;padding-top:10px;border-top:1px solid var(--border)}
 // Filter performance revision: debounced filtering + viewport-aware Leaflet rendering
 // ============================================================================
 // Design principles:
-//   1. User data are the primary input; there is no required static tracker.json.
+//   1. User data are the primary input.
 //   2. Original rows are preserved exactly for export.
 //   3. Core map fields are mapped explicitly.
 //   4. Trait filters are generated dynamically from columns selected by the user.
@@ -385,7 +390,7 @@ const layerControl = L.control.layers(
 // IMPORTANT:
 // Do NOT load all 846 global polygons as a live FeatureLayer. That can make
 // the browser fetch/render too much geometry and compete with large specimen
-// datasets. Instead, query only the ecoregions intersecting the CURRENT MAP
+// datasets. Instead, we made it to query only the ecoregions intersecting the CURRENT MAP
 // VIEW when the researcher turns the overlay on or pans/zooms.
 //
 // The layer is also simplified by the ArcGIS service using maxAllowableOffset.
@@ -722,9 +727,6 @@ function setStage(stage) {
 // ---------------------------------------------------------------------------
 // Example dataset: previous Trait MMAP tracker.json
 // ---------------------------------------------------------------------------
-// The bundled example is the previous host-focused Trait MMAP dataset.
-// It is converted in the browser to one row per biological mammal host so that
-// the example uses the same upload-first filtering system as any user dataset.
 // Parasite records linked to each host are summarized into count/list columns.
 //
 function trackerString(D, idx) {
@@ -1157,19 +1159,28 @@ function makeCategoricalMultiFilter(field, allLabel = "All values") {
 
   const details = document.createElement("details");
   details.className = "multi-filter";
-
   const summary = document.createElement("summary");
   summary.textContent = allLabel;
-
   const options = document.createElement("div");
   options.className = "multi-options";
 
-  // Excel-style search box: this searches only the list of available values.
-  // Typing here does NOT filter map records until a checkbox is selected.
+  const actions = document.createElement("div");
+  actions.className = "multi-actions";
+  const selectAll = document.createElement("button");
+  selectAll.type = "button";
+  selectAll.className = "secondary";
+  selectAll.textContent = "Select all";
+  const clear = document.createElement("button");
+  clear.type = "button";
+  clear.className = "secondary";
+  clear.textContent = "Clear";
+  actions.append(selectAll, clear);
+  options.appendChild(actions);
+
   const search = document.createElement("input");
   search.type = "search";
   search.className = "multi-search";
-  search.placeholder = "Search";
+  search.placeholder = "Search values…";
   search.setAttribute("aria-label", `Search ${field} values`);
   options.appendChild(search);
 
@@ -1177,90 +1188,30 @@ function makeCategoricalMultiFilter(field, allLabel = "All values") {
   list.className = "multi-list";
   options.appendChild(list);
 
-  // Excel-style Select All checkbox.
-  const selectAllLabel = document.createElement("label");
-  selectAllLabel.className = "multi-option";
-  selectAllLabel.style.fontWeight = "700";
-
-  const selectAll = document.createElement("input");
-  selectAll.type = "checkbox";
-  selectAll.checked = false;
-
-  const selectAllText = document.createElement("span");
-  selectAllText.className = "value";
-  selectAllText.textContent = "(Select All)";
-
-  const selectAllCount = document.createElement("span");
-  selectAllCount.className = "count";
-  selectAllCount.textContent = values.length.toLocaleString();
-
-  selectAllLabel.append(selectAll, selectAllText, selectAllCount);
-  list.appendChild(selectAllLabel);
-
-  const emptyMessage = document.createElement("div");
-  emptyMessage.className = "multi-empty";
-  emptyMessage.textContent = "No matching values";
-  emptyMessage.hidden = true;
-  list.appendChild(emptyMessage);
-
   const checkboxes = [];
   const optionLabels = [];
-
   for (const value of values) {
     const label = document.createElement("label");
     label.className = "multi-option";
-
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.value = value;
-
     const valueSpan = document.createElement("span");
     valueSpan.className = "value";
     valueSpan.textContent = value;
-
     const count = document.createElement("span");
     count.className = "count";
     count.textContent = counts.get(value).toLocaleString();
-
     label.append(cb, valueSpan, count);
     list.appendChild(label);
-
     checkboxes.push(cb);
-    optionLabels.push({ label, value, cb });
+    optionLabels.push({ label, value });
   }
 
-  const filter = {
-    type:"categorical",
-    field,
-    details,
-    summary,
-    checkboxes,
-    allLabel,
-    search,
-    optionLabels,
-    selectAll
-  };
-
-  function visibleItems() {
-    return optionLabels.filter(item => !item.label.hidden);
-  }
-
-  function updateSelectAllState() {
-    const visible = visibleItems();
-    const checkedVisible = visible.filter(item => item.cb.checked).length;
-
-    selectAll.disabled = visible.length === 0;
-    selectAll.checked = visible.length > 0 && checkedVisible === visible.length;
-    selectAll.indeterminate = checkedVisible > 0 && checkedVisible < visible.length;
-
-    // When searching, Select All applies to the matching/search-result values.
-    selectAllText.textContent = search.value.trim() ? "(Select All Search Results)" : "(Select All)";
-    selectAllCount.textContent = visible.length.toLocaleString();
-  }
+  const filter = { type:"categorical", field, details, summary, checkboxes, allLabel, search, optionLabels };
 
   function updateSummary() {
     const selected = checkboxes.filter(cb => cb.checked).map(cb => cb.value);
-
     if (!selected.length || selected.length === checkboxes.length) {
       summary.textContent = allLabel;
     } else if (selected.length <= 2) {
@@ -1268,42 +1219,62 @@ function makeCategoricalMultiFilter(field, allLabel = "All values") {
     } else {
       summary.textContent = `${selected.length} values selected`;
     }
+  }
 
-    updateSelectAllState();
+  let highlightedItem = null;
+  let highlightTimer = null;
+
+  function clearSearchHighlight() {
+    if (highlightedItem) highlightedItem.label.classList.remove("search-hit");
+    highlightedItem = null;
+    if (highlightTimer) {
+      clearTimeout(highlightTimer);
+      highlightTimer = null;
+    }
   }
 
   search.addEventListener("input", () => {
+    clearSearchHighlight();
+
     const q = search.value.trim().toLocaleLowerCase();
-    let shown = 0;
+    if (!q) return;
 
-    for (const item of optionLabels) {
-      const match = !q || item.value.toLocaleLowerCase().includes(q);
-      item.label.hidden = !match;
-      if (match) shown++;
-    }
+    // Keep the full alphabetized list visible. Search is only a navigation aid:
+    // find the first matching value, scroll to it, and briefly highlight the row.
+    const match =
+      optionLabels.find(item => item.value.toLocaleLowerCase().startsWith(q)) ||
+      optionLabels.find(item => item.value.toLocaleLowerCase().includes(q));
 
-    emptyMessage.hidden = shown !== 0;
-    updateSelectAllState();
+    if (!match) return;
+
+    highlightedItem = match;
+    match.label.classList.add("search-hit");
+    match.label.scrollIntoView({ behavior:"smooth", block:"center" });
+
+    highlightTimer = setTimeout(() => {
+      if (highlightedItem === match) {
+        match.label.classList.remove("search-hit");
+        highlightedItem = null;
+      }
+    }, 1800);
   });
 
-  // Checking a value changes the map filter. Searching alone does not.
-  checkboxes.forEach(cb => cb.addEventListener("change", () => {
-    updateSummary();
-    scheduleFilterRender();
-  }));
-
-  // Excel-like behavior: Select All acts on the currently visible search results.
-  selectAll.addEventListener("change", () => {
-    const shouldCheck = selectAll.checked;
-    for (const item of visibleItems()) item.cb.checked = shouldCheck;
-    updateSummary();
-    scheduleFilterRender(0);
+  // Searching only finds and scrolls to a value; it never changes map filtering.
+  checkboxes.forEach(cb => cb.addEventListener("change", () => { updateSummary(); scheduleFilterRender(); }));
+  selectAll.addEventListener("click", () => {
+    checkboxes.forEach(cb => cb.checked = true);
+    updateSummary(); scheduleFilterRender(0);
+  });
+  clear.addEventListener("click", () => {
+    checkboxes.forEach(cb => cb.checked = false);
+    updateSummary(); scheduleFilterRender(0);
   });
 
   details.append(summary, options);
   filter.updateSummary = updateSummary;
   return filter;
 }
+
 function selectedCategoricalValues(filter) {
   return filter.checkboxes.filter(cb => cb.checked).map(cb => cb.value);
 }
